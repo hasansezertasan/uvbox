@@ -1,0 +1,108 @@
+name: Release & Publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Version bump"
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  tag-release:
+    name: Create and push release tag
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.compute-tag.outputs.tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Install svu
+        run: |
+          curl -LO https://github.com/caarlos0/svu/releases/download/v3.2.3/svu_3.2.3_amd64.deb
+          sudo apt-get install -y ./svu_3.2.3_amd64.deb
+
+      - id: compute-tag
+        name: Compute next tag with svu
+        env:
+          BUMP: ${{ github.event.inputs.bump }}
+        run: |
+          TAG="$(svu "$BUMP")"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+
+      - name: Push tag
+        run: |
+          git tag "${{ env.TAG }}"
+          git push --tags
+
+  release:
+    name: Release with goreleaser
+    runs-on: ubuntu-latest
+    needs: tag-release
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0  # required for goreleaser to generate changelog
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: boxer/go.mod
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: '~> v2'
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SNAPCRAFT_BUILD: "true"
+
+  cleanup-on-failure:
+    name: Cleanup tag on failure
+    runs-on: ubuntu-latest
+    needs: [tag-release, release]
+    if: failure()
+    steps:
+      - uses: actions/checkout@v5
+      - name: Delete Git tag locally and remotely
+        env:
+          TAG: ${{ needs.tag-release.outputs.tag }}
+        run: |
+          echo "Cleaning up failed release tag: $TAG"
+          # Delete local tag (no-op if missing)
+          git tag -d "$TAG" || true
+          # Delete remote tag (support both syntaxes)
+          git push origin ":refs/tags/$TAG" || git push --delete origin "$TAG" || true
+      - name: (Optional) Delete GitHub release if it was created
+        env:
+          TAG: ${{ needs.tag-release.outputs.tag }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete "$TAG" -y || true

@@ -1,0 +1,24 @@
+.DS_Store
+**/.vscode
+**/.idea
+**/.venv
+
+box/uvbox.toml
+
+boxer/boxes
+boxer/boxer
+**/embedded_*
+
+boxer-pypi/dist
+boxer-pypi/build
+
+**/__pycache__
+**/*.egg-info
+
+boxer-pypi/bin
+boxer-pypi-golang/dist
+
+**/ca-bundle.crt
+
+# GoReleaser output
+dist/

@@ -1,0 +1,120 @@
+project_name: uvbox
+version: 2
+report_sizes: true
+
+before:
+  hooks:
+    # Ensure the embedded box repository archive is generated before building
+    - bash -lc "cd boxer && go generate ./..."
+
+builds:
+  - id: uvbox
+    dir: ./boxer
+    main: .
+    binary: uvbox
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - id: default
+    ids:
+      - uvbox
+    name_template: "{{ .Binary }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        formats: zip
+
+checksum:
+  name_template: "checksums.txt"
+
+dockers:
+  - image_templates:
+      - "ghcr.io/coruscant11/uvbox:{{ .Version }}-amd64"
+    use: buildx
+    dockerfile: Containerfile
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.description=uvbox generates standalone Python executables that bootstrap an embedded uv to install and run your app in an isolated environment. For any platform, from any platform."
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.name={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--label=org.opencontainers.image.source={{.GitURL}}"
+    extra_files:
+      - box
+      - boxer
+  - image_templates:
+      - "ghcr.io/coruscant11/uvbox:{{ .Version }}-arm64"
+    use: buildx
+    dockerfile: Containerfile
+    build_flag_templates:
+      - "--platform=linux/arm64"
+      - "--label=org.opencontainers.image.description=uvbox generates standalone Python executables that bootstrap an embedded uv to install and run your app in an isolated environment. For any platform, from any platform."
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.name={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--label=org.opencontainers.image.source={{.GitURL}}"
+    extra_files:
+      - box
+      - boxer
+
+docker_manifests:
+  - name_template: "ghcr.io/coruscant11/uvbox:latest"
+    image_templates:
+      - "ghcr.io/coruscant11/uvbox:{{ .Version }}-amd64"
+      - "ghcr.io/coruscant11/uvbox:{{ .Version }}-arm64"
+  - name_template: "ghcr.io/coruscant11/uvbox:{{ .Branch }}"
+    image_templates:
+      - "ghcr.io/coruscant11/uvbox:{{ .Version }}-amd64"
+      - "ghcr.io/coruscant11/uvbox:{{ .Version }}-arm64"
+  - name_template: "ghcr.io/coruscant11/uvbox:{{ .Major }}"
+    image_templates:
+      - "ghcr.io/coruscant11/uvbox:{{ .Version }}-amd64"
+      - "ghcr.io/coruscant11/uvbox:{{ .Version }}-arm64"
+  - name_template: "ghcr.io/coruscant11/uvbox:{{ .Major }}.{{ .Minor }}"
+    image_templates:
+      - "ghcr.io/coruscant11/uvbox:{{ .Version }}-amd64"
+      - "ghcr.io/coruscant11/uvbox:{{ .Version }}-arm64"
+  - name_template: "ghcr.io/coruscant11/uvbox:{{ .Version }}"
+    image_templates:
+      - "ghcr.io/coruscant11/uvbox:{{ .Version }}-amd64"
+      - "ghcr.io/coruscant11/uvbox:{{ .Version }}-arm64"
+
+nfpms:
+  - id: uvbox
+    package_name: uvbox
+    ids:
+      - uvbox
+    formats: [apk, archlinux, deb, ipk, rpm]
+    vendor: "Amadeus s.a.s."
+    maintainer: "Jean-Philippe CARLENS <jean-philippe.carlens@amadeus.com>"
+    homepage: "https://github.com/AmadeusITGroup/uvbox"
+    description: |
+      uvbox generates standalone Python executables that bootstrap an embedded
+      uv to install and run your app in an isolated environment. For any platform, from any platform.
+    license: MIT
+    provides:
+      - uvbox
+    priority: extra
+    section: utils
+
+release:
+  # Use GitHub Releases (default)
+  draft: false
+  prerelease: auto
+
+changelog:
+  use: github
+  sort: desc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'

@@ -1,0 +1,9 @@
+[package]
+name = "cowsay"
+script = "cowsay"
+
+[uv]
+environment = [
+    "UV_INDEX_URL=https://my.artifactory.com/artifactory/api/pypi/pypi-mirror/simple",
+    "UV_PYTHON_INSTALL_MIRROR=https://my.github.remote/astral-sh/python-build-standalone/releases/download",
+]

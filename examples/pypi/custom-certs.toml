@@ -1,0 +1,10 @@
+[package]
+# Package name that will be searched on the pypi repository
+name = "my-package"
+# Script that will be launched. Most probably should be declared in the package pyproject.toml
+script = "my-entrypoint"
+
+[certs]
+# Note: This is a relative path from the command line working directory.
+# Will bundle the certificates files inside the binary and use it for SSL_CERT_FILE and REQUESTS_CA_BUNDLE environment variables
+path = "ca-bundle.crt"
