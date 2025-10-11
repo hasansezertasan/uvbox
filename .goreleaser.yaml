@@ -21,6 +21,10 @@ builds:
     goarch:
       - amd64
       - arm64
+    hooks:
+      post:
+        - cmd: python3 pypi/uvbox/build_wheels.py "{{ .Os }}" "{{ .Arch }}" "{{ .Version }}" "{{ .Path }}" --binary-name "{{ .Name }}"
+          output: true
 
 archives:
   - id: default
@@ -33,60 +37,6 @@ archives:
 
 checksum:
   name_template: "checksums.txt"
-
-dockers:
-  - image_templates:
-      - "ghcr.io/coruscant11/uvbox:{{ .Version }}-amd64"
-    use: buildx
-    dockerfile: Containerfile
-    build_flag_templates:
-      - "--platform=linux/amd64"
-      - "--label=org.opencontainers.image.description=uvbox generates standalone Python executables that bootstrap an embedded uv to install and run your app in an isolated environment. For any platform, from any platform."
-      - "--label=org.opencontainers.image.created={{.Date}}"
-      - "--label=org.opencontainers.image.name={{.ProjectName}}"
-      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-      - "--label=org.opencontainers.image.version={{.Version}}"
-      - "--label=org.opencontainers.image.source={{.GitURL}}"
-    extra_files:
-      - box
-      - boxer
-  - image_templates:
-      - "ghcr.io/coruscant11/uvbox:{{ .Version }}-arm64"
-    use: buildx
-    dockerfile: Containerfile
-    build_flag_templates:
-      - "--platform=linux/arm64"
-      - "--label=org.opencontainers.image.description=uvbox generates standalone Python executables that bootstrap an embedded uv to install and run your app in an isolated environment. For any platform, from any platform."
-      - "--label=org.opencontainers.image.created={{.Date}}"
-      - "--label=org.opencontainers.image.name={{.ProjectName}}"
-      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-      - "--label=org.opencontainers.image.version={{.Version}}"
-      - "--label=org.opencontainers.image.source={{.GitURL}}"
-    extra_files:
-      - box
-      - boxer
-
-docker_manifests:
-  - name_template: "ghcr.io/coruscant11/uvbox:latest"
-    image_templates:
-      - "ghcr.io/coruscant11/uvbox:{{ .Version }}-amd64"
-      - "ghcr.io/coruscant11/uvbox:{{ .Version }}-arm64"
-  - name_template: "ghcr.io/coruscant11/uvbox:{{ .Branch }}"
-    image_templates:
-      - "ghcr.io/coruscant11/uvbox:{{ .Version }}-amd64"
-      - "ghcr.io/coruscant11/uvbox:{{ .Version }}-arm64"
-  - name_template: "ghcr.io/coruscant11/uvbox:{{ .Major }}"
-    image_templates:
-      - "ghcr.io/coruscant11/uvbox:{{ .Version }}-amd64"
-      - "ghcr.io/coruscant11/uvbox:{{ .Version }}-arm64"
-  - name_template: "ghcr.io/coruscant11/uvbox:{{ .Major }}.{{ .Minor }}"
-    image_templates:
-      - "ghcr.io/coruscant11/uvbox:{{ .Version }}-amd64"
-      - "ghcr.io/coruscant11/uvbox:{{ .Version }}-arm64"
-  - name_template: "ghcr.io/coruscant11/uvbox:{{ .Version }}"
-    image_templates:
-      - "ghcr.io/coruscant11/uvbox:{{ .Version }}-amd64"
-      - "ghcr.io/coruscant11/uvbox:{{ .Version }}-arm64"
 
 nfpms:
   - id: uvbox

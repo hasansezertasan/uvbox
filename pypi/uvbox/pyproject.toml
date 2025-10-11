@@ -1,0 +1,52 @@
+[project]
+name = "uvbox"
+description = "Fast, cross-platform Python application packager with uv and Go"
+requires-python = ">=3.8"
+dependencies = [
+    "go-bin",
+    "nfpm",
+]
+license = "MIT"
+license-files = ["LICENSE"]
+readme = "README.md"
+dynamic = ["version"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Build Tools",
+    "Topic :: System :: Software Distribution",
+    "Environment :: Console",
+]
+
+[project.urls]
+Source = "https://github.com/AmadeusITGroup/uvbox"
+Issues = "https://github.com/AmadeusITGroup/uvbox/issues"
+
+[dependency-groups]
+dev = [
+    {include-group = "build"}
+]
+build = [
+    "hatchling>=1.25.0",
+    "build>=1.0.0",
+]
+
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+# Allow wheel without any python file
+bypass-selection = true
+
+[tool.hatch.build.targets.wheel.hooks.custom]
+[tool.hatch.metadata.hooks.custom]
+# Use file hatch_build.py during build

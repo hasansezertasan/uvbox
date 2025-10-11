@@ -1,6 +1,6 @@
 package main
 
-//go:generate go run generate.go
+//go:generate go run -tags "!rar" generate.go
 
 import (
 	"archive/tar"
@@ -24,16 +24,18 @@ import (
 )
 
 var (
-    version = "dev"
-    commit  = "none"
-    date    = "unknown"
+	version   = ""
+	commit    = ""
+	treeState = ""
+	date      = ""
+	builtBy   = ""
 )
 
 var NoBanner bool
 var Config string
 var Output string
 var Nfpm string
-var Version string
+var ReleaseVersion string
 
 var Darwin bool
 var Linux bool
@@ -115,11 +117,11 @@ func main() {
 	}
 	rootCmd.AddCommand(pypiCmd)
 	rootCmd.AddCommand(wheelCmd)
-	rootCmd.PersistentFlags().StringVarP(&Version, "release-version", "", "0.0.0", "Specify a version for the binaries. Will be used for example for versionning linux packages.")
+	rootCmd.PersistentFlags().StringVarP(&ReleaseVersion, "release-version", "", "0.0.0", "Specify a version for the binaries. Will be used for example for versionning linux packages.")
 	rootCmd.PersistentFlags().BoolVarP(&NoBanner, "no-banner", "", false, "Do not display the banner")
 	rootCmd.PersistentFlags().StringVarP(&Nfpm, "nfpm", "", "", "Generate linux packages with the given nfpm configuration file")
 
-	err := fang.Execute(context.Background(), rootCmd)
+	err := fang.Execute(context.Background(), rootCmd, fang.WithVersion(version))
 	if err != nil {
 		os.Exit(1)
 	}
@@ -543,7 +545,7 @@ func packageWithNfpm(packager, builtExecutablePath, executableName, platform, ar
 		return fmt.Errorf("failed to get output directory for nfpm: %w", err)
 	}
 
-	nfpmEnviron := nfpmEnvironmentVariables(builtExecutablePath, executableName, platform, arch, Version)
+	nfpmEnviron := nfpmEnvironmentVariables(builtExecutablePath, executableName, platform, arch, ReleaseVersion)
 
 	// Run nfpm
 	if err := nfpmPkg(nfpmConfig, output, packager, temporaryDirectory, nfpmEnviron); err != nil {

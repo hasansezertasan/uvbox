@@ -10,7 +10,7 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/mholt/archiver/v4"
+	"github.com/mholt/archives"
 )
 
 func deleteIfExists(filename string) {
@@ -21,9 +21,9 @@ func deleteIfExists(filename string) {
 	}
 }
 
-func boxRepositoryFiles() []archiver.File {
+func boxRepositoryFiles() []archives.FileInfo {
 	// Read the box code repository folder from disk
-	files, err := archiver.FilesFromDisk(nil, map[string]string{
+	files, err := archives.FilesFromDisk(context.Background(), nil, map[string]string{
 		"../box": "box",
 	})
 	if err != nil {
@@ -32,7 +32,7 @@ func boxRepositoryFiles() []archiver.File {
 	return files
 }
 
-func createGzipFromFiles(files []archiver.File, archiveFilename string) {
+func createGzipFromFiles(files []archives.FileInfo, archiveFilename string) {
 	// Create the archive file
 	out, err := os.Create(archiveFilename)
 	if err != nil {
@@ -41,9 +41,9 @@ func createGzipFromFiles(files []archiver.File, archiveFilename string) {
 	defer out.Close()
 
 	// Compress/archive into the file
-	format := archiver.CompressedArchive{
-		Compression: archiver.Gz{},
-		Archival:    archiver.Tar{},
+	format := archives.CompressedArchive{
+		Compression: archives.Gz{},
+		Archival:    archives.Tar{},
 	}
 	err = format.Archive(context.Background(), out, files)
 	if err != nil {

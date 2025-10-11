@@ -1,5 +1,11 @@
 name: Release & Publish
 
+# This workflow handles the complete release process:
+# 1. Computes and pushes version tag with automatic cleanup on failure
+# 2. Builds Go binaries with GoReleaser
+# 3. Signs and publishes Python wheels to PyPI or Test PyPI (user choice)
+# All steps run in a single job with automatic tag/release cleanup on any failure
+
 on:
   workflow_dispatch:
     inputs:
@@ -10,70 +16,67 @@ on:
           - patch
           - minor
           - major
+      pypi_env:
+        description: "PyPI environment"
+        type: choice
+        options:
+          - testpypi
+          - pypi
+        default: testpypi
 
 permissions:
-  contents: write
-  packages: write
+  contents: write      # Required for creating releases and tags
+  id-token: write      # Required for OIDC authentication with PyPI
 
 jobs:
-  tag-release:
-    name: Create and push release tag
+  release:
+    name: Release and Publish
     runs-on: ubuntu-latest
+    environment:
+      name: ${{ github.event.inputs.pypi_env }}
+      url: ${{ github.event.inputs.pypi_env == 'pypi' && 'https://pypi.org/p/uvbox' || 'https://test.pypi.org/p/uvbox' }}
     outputs:
       tag: ${{ steps.compute-tag.outputs.tag }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
         with:
-          fetch-depth: 0
+          fetch-depth: 0  # Required for tag computation and goreleaser changelog
 
+      # svu is a tool that computes semantic version tags based on conventional commits
       - name: Install svu
         run: |
           curl -LO https://github.com/caarlos0/svu/releases/download/v3.2.3/svu_3.2.3_amd64.deb
           sudo apt-get install -y ./svu_3.2.3_amd64.deb
+          rm ./svu_3.2.3_amd64.deb
 
+      # Compute tag, create it, and push to remote
       - id: compute-tag
-        name: Compute next tag with svu
+        name: Compute and push tag
         env:
           BUMP: ${{ github.event.inputs.bump }}
         run: |
           TAG="$(svu "$BUMP")"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "TAG=$TAG" >> "$GITHUB_ENV"
-
-      - name: Push tag
-        run: |
-          git tag "${{ env.TAG }}"
+          git tag "$TAG"
           git push --tags
 
-  release:
-    name: Release with goreleaser
-    runs-on: ubuntu-latest
-    needs: tag-release
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
+      # Python is needed for GoReleaser post-build hooks that create Python wheels
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          fetch-depth: 0  # required for goreleaser to generate changelog
+          python-version: '3.13'
+
+      - name: Install Python build tools
+        run: pip install hatchling build
 
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
           go-version-file: boxer/go.mod
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
+      # GoReleaser builds binaries, creates GitHub release, and runs post-build hooks
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
@@ -84,25 +87,50 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SNAPCRAFT_BUILD: "true"
 
-  cleanup-on-failure:
-    name: Cleanup tag on failure
-    runs-on: ubuntu-latest
-    needs: [tag-release, release]
-    if: failure()
-    steps:
-      - uses: actions/checkout@v5
-      - name: Delete Git tag locally and remotely
-        env:
-          TAG: ${{ needs.tag-release.outputs.tag }}
+      # Verify wheel structure before publishing
+      - name: Verify wheel contents
         run: |
-          echo "Cleaning up failed release tag: $TAG"
-          # Delete local tag (no-op if missing)
-          git tag -d "$TAG" || true
-          # Delete remote tag (support both syntaxes)
-          git push origin ":refs/tags/$TAG" || git push --delete origin "$TAG" || true
-      - name: (Optional) Delete GitHub release if it was created
+          if ls wheels/*.whl 1> /dev/null 2>&1; then
+            echo "Built wheels:"
+            ls -la wheels/*.whl
+          else
+            echo "ERROR: No wheel files found!"
+            exit 1
+          fi
+
+      # Publish to PyPI with attestations
+      - name: Publish to ${{ github.event.inputs.pypi_env == 'pypi' && 'PyPI' || 'Test PyPI' }}
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: ${{ github.event.inputs.pypi_env == 'pypi' && 'https://upload.pypi.org/legacy/' || 'https://test.pypi.org/legacy/' }}
+          packages-dir: wheels/
+          verbose: true
+          print-hash: true
+          skip-existing: true
+          attestations: true  # Upload PEP 740 attestations to PyPI
+
+      # Archive signed wheels and signatures for later reference
+      - name: Upload signed artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: signed-wheels
+          path: |
+            wheels/*.whl
+            wheels/*.whl.sigstore
+
+      # Cleanup tag and release if the workflow failed or was cancelled
+      - name: Cleanup on failure
+        if: failure() || cancelled()
         env:
-          TAG: ${{ needs.tag-release.outputs.tag }}
+          TAG: ${{ steps.compute-tag.outputs.tag }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release delete "$TAG" -y || true
+          echo "Job failed or cancelled, cleaning up tag and release: $TAG"
+
+          # Delete GitHub release if it was created
+          gh release delete "$TAG" -y 2>/dev/null || true
+
+          # Delete git tag locally and remotely
+          git tag -d "$TAG" 2>/dev/null
+          git push --delete origin "$TAG" 2>/dev/null
+

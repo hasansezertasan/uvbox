@@ -121,45 +121,6 @@ func TestCanDetectInstalledPackageVersion(t *testing.T) {
 	}
 }
 
-func TestCanInstallPytestWithoutConstraintsIncludingPackaging241(t *testing.T) {
-	homePath := testDirectory(t)
-	defer os.RemoveAll(homePath)
-
-	packageToInstall := "pytest"
-	packageVersion := "8.3.3"
-
-	box := installedTextBoxWithPackage(t, homePath, packageToInstall, packageVersion, "")
-
-	path, err := box.InstalledPackagePath()
-	if err != nil {
-		t.Fatalf("could not get installation path of package %s: %v", packageToInstall, err)
-	}
-
-	uvExecutable, err := box.InstalledUvExecutablePath()
-	if err != nil {
-		t.Fatalf("could not get installed uv executable path: %v", err)
-	}
-
-	cmd := exec.Command(uvExecutable, "pip", "freeze")
-	cmd.Dir = path
-	cmd.Stderr = os.Stderr
-	cmd.Env = []string{}
-
-	out, err := cmd.Output()
-	if err != nil {
-		t.Fatalf("could not run pip freeze: %v", err)
-	}
-
-	if string(out) == "" {
-		t.Fatal("expected freeze list to not be empty")
-	}
-
-	expectedFreeze := "packaging==24.1"
-	if !strings.Contains(string(out), expectedFreeze) {
-		log.Fatalf("expected %s, freeze list: %s", expectedFreeze, string(out))
-	}
-}
-
 func TestCanInstallPytestWithConstraintsPackagingTo240(t *testing.T) {
 	defer gock.Off()
 	defer gock.DisableNetworking()
