@@ -1,0 +1,75 @@
+[tools]
+go = "latest"
+golangci-lint = "latest"
+golangci-lint-langserver = "latest"
+goreleaser = "latest"
+nfpm = "latest"
+
+[tasks.format]
+description = "Format all Go code"
+run = "gofmt -w boxer/ box/"
+
+[tasks.build]
+description = "Build release artifacts locally with goreleaser"
+run = "goreleaser build --snapshot --clean"
+
+[tasks."generate:boxer"]
+description = "Run go generate on boxer folder"
+run = "go generate"
+dir = "{{cwd}}/boxer"
+
+[tasks."generate:box"]
+description = "Run go generate on boxer folder"
+run = "go generate"
+dir = "{{cwd}}/box"
+
+[tasks."fmt-check:boxer"]
+description = "Check Go formatting in boxer/"
+run = "gofmt -l ."
+dir = "{{cwd}}/boxer"
+depends = ["generate:boxer"]
+
+[tasks."fmt-check:box"]
+description = "Check Go formatting in box/"
+run = "gofmt -l ."
+dir = "{{cwd}}/box"
+depends = ["generate:box"]
+
+[tasks."lint:boxer"]
+description = "Run golangci-lint in boxer/"
+run = "golangci-lint run"
+dir = "{{cwd}}/boxer"
+depends = ["generate:boxer"]
+
+[tasks."lint:box"]
+description = "Run golangci-lint in box/"
+run = "golangci-lint run"
+dir = "{{cwd}}/box"
+depends = ["generate:box"]
+
+[tasks."test:boxer"]
+description = "Run tests in boxer/"
+run = "go test -v ./..."
+dir = "{{cwd}}/boxer"
+depends = ["generate:boxer"]
+
+[tasks."test:box"]
+description = "Run tests in box/"
+run = "go test -v ./..."
+dir = "{{cwd}}/box"
+depends = ["generate:box"]
+
+[tasks."ci:boxer"]
+description = "Run all CI checks for boxer"
+depends = ["fmt-check:boxer", "lint:boxer", "test:boxer"]
+
+[tasks."ci:box"]
+description = "Run all CI checks for box"
+depends = ["fmt-check:box", "lint:box", "test:box"]
+
+[tasks.ci]
+description = "Run all CI checks"
+depends = ["ci:boxer", "ci:box"]
+
+[settings]
+jobs = 1

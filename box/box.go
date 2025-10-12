@@ -172,11 +172,6 @@ func (b *Box) dedicatedFolder() string {
 	return filepath.Join(b.uvboxHomePath(), b.InstallationIdentifier)
 }
 
-// folderUnderHomePath returns the path to a folder under the uvbox home path.
-func (b *Box) folderUnderHomePath(folder string) string {
-	return filepath.Join(b.uvboxHomePath(), folder)
-}
-
 // uvboxHomePath returns the path to the uvbox home path.
 func (b *Box) uvboxHomePath() string {
 	return filepath.Join(b.HomePath, "uvbox")

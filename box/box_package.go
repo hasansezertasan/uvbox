@@ -102,7 +102,7 @@ func (b *Box) InstallPackage(packageVersion, packageConstraintsUrl string) error
 	}
 
 	if constraintsFile != "" {
-		os.RemoveAll(constraintsFile)
+		_ = os.RemoveAll(constraintsFile)
 	}
 	return nil
 }

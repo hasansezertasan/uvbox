@@ -24,11 +24,7 @@ import (
 )
 
 var (
-	version   = ""
-	commit    = ""
-	treeState = ""
-	date      = ""
-	builtBy   = ""
+	version = ""
 )
 
 var NoBanner bool
@@ -252,10 +248,14 @@ func determineBuildsTargets() ([]string, []string) {
 func run() error {
 	// Diplay banner
 	if !NoBanner {
-		pterm.DefaultBigText.WithLetters(
+		renderer := pterm.DefaultBigText.WithLetters(
 			putils.LettersFromStringWithStyle("UV", pterm.FgCyan.ToStyle()),
-			putils.LettersFromStringWithStyle("BOX", pterm.FgLightMagenta.ToStyle())).
-			Render() // Render the big text to the terminal
+			putils.LettersFromStringWithStyle("BOX", pterm.FgLightMagenta.ToStyle()))
+
+		err := renderer.Render() // Render the big text to the terminal
+		if err != nil {
+			_ = fmt.Sprintln("failed to display banner: %w", err)
+		}
 	}
 
 	// Create a temporary directory
@@ -381,27 +381,36 @@ func outputFolderAbsolutePath() (string, error) {
 
 func determineArchiveNameFromPlatform(executableName, platform, arch string) (string, error) {
 	archiveName := ""
-	if platform == PLATFORM_WINDOWS {
-		if arch == ARCH_AMD64 {
+	switch platform {
+	case PLATFORM_WINDOWS:
+		switch arch {
+		case ARCH_AMD64:
 			archiveName = "x86_64-pc-windows-msvc.zip"
-		} else if arch == ARCH_ARM64 {
+		case ARCH_ARM64:
 			archiveName = "aarch64-pc-windows-msvc.zip"
-		} else {
+		default:
 			return "", fmt.Errorf("unsupported architecture: %s/%s", platform, arch)
 		}
-	} else if platform == PLATFORM_LINUX || platform == PLATFORM_DARWIN {
-		if platform == PLATFORM_LINUX && arch == ARCH_AMD64 {
+	case PLATFORM_LINUX:
+		switch arch {
+		case ARCH_AMD64:
 			archiveName = "x86_64-unknown-linux-gnu.tar.gz"
-		} else if platform == PLATFORM_LINUX && arch == ARCH_ARM64 {
+		case ARCH_ARM64:
 			archiveName = "aarch64-unknown-linux-gnu.tar.gz"
-		} else if platform == PLATFORM_DARWIN && arch == ARCH_AMD64 {
+		default:
+			return "", fmt.Errorf("unsupported architecture: %s/%s", platform, arch)
+		}
+	case PLATFORM_DARWIN:
+		switch arch {
+		case ARCH_AMD64:
 			archiveName = "x86_64-apple-darwin.tar.gz"
-		} else if platform == PLATFORM_DARWIN && arch == ARCH_ARM64 {
+		case ARCH_ARM64:
 			archiveName = "aarch64-apple-darwin.tar.gz"
-		} else {
+		default:
 			return "", fmt.Errorf("unsupported architecture: %s/%s", platform, arch)
 		}
 	}
+
 	archiveName = executableName + "-" + archiveName
 	return archiveName, nil
 }

@@ -16,39 +16,45 @@ on:
           - patch
           - minor
           - major
-      pypi_env:
-        description: "PyPI environment"
-        type: choice
-        options:
-          - testpypi
-          - pypi
-        default: testpypi
-
-permissions:
-  contents: write      # Required for creating releases and tags
-  id-token: write      # Required for OIDC authentication with PyPI
+      publish_to_pypi:
+        description: "Publish to producton PyPI. By default, it only releases to test PyPI."
+        type: boolean
+        default: true
 
 jobs:
   release:
-    name: Release and Publish
+    name: Build and Release
     runs-on: ubuntu-latest
-    environment:
-      name: ${{ github.event.inputs.pypi_env }}
-      url: ${{ github.event.inputs.pypi_env == 'pypi' && 'https://pypi.org/p/uvbox' || 'https://test.pypi.org/p/uvbox' }}
     outputs:
       tag: ${{ steps.compute-tag.outputs.tag }}
+    permissions:
+      contents: write # Required for creating releases and tags
     steps:
+      # Clone
       - name: Checkout
         uses: actions/checkout@v5
         with:
           fetch-depth: 0  # Required for tag computation and goreleaser changelog
 
-      # svu is a tool that computes semantic version tags based on conventional commits
+      # Python is needed for GoReleaser post-build hooks that create Python wheels
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      # Dependencies used for wheel builds
+      - name: Install Python build tools
+        run: pip install hatchling build
+
+      # Go compiler
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: boxer/go.mod
+
+      # Used to bump version
       - name: Install svu
-        run: |
-          curl -LO https://github.com/caarlos0/svu/releases/download/v3.2.3/svu_3.2.3_amd64.deb
-          sudo apt-get install -y ./svu_3.2.3_amd64.deb
-          rm ./svu_3.2.3_amd64.deb
+        run: go install github.com/caarlos0/svu/v3@latest
 
       # Compute tag, create it, and push to remote
       - id: compute-tag
@@ -62,20 +68,6 @@ jobs:
           git tag "$TAG"
           git push --tags
 
-      # Python is needed for GoReleaser post-build hooks that create Python wheels
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-
-      - name: Install Python build tools
-        run: pip install hatchling build
-
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version-file: boxer/go.mod
-
       # GoReleaser builds binaries, creates GitHub release, and runs post-build hooks
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
@@ -85,38 +77,14 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SNAPCRAFT_BUILD: "true"
 
-      # Verify wheel structure before publishing
-      - name: Verify wheel contents
-        run: |
-          if ls wheels/*.whl 1> /dev/null 2>&1; then
-            echo "Built wheels:"
-            ls -la wheels/*.whl
-          else
-            echo "ERROR: No wheel files found!"
-            exit 1
-          fi
-
-      # Publish to PyPI with attestations
-      - name: Publish to ${{ github.event.inputs.pypi_env == 'pypi' && 'PyPI' || 'Test PyPI' }}
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          repository-url: ${{ github.event.inputs.pypi_env == 'pypi' && 'https://upload.pypi.org/legacy/' || 'https://test.pypi.org/legacy/' }}
-          packages-dir: wheels/
-          verbose: true
-          print-hash: true
-          skip-existing: true
-          attestations: true  # Upload PEP 740 attestations to PyPI
-
-      # Archive signed wheels and signatures for later reference
-      - name: Upload signed artifacts
+      # Upload wheels as artifacts for publishing jobs
+      - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
-          name: signed-wheels
-          path: |
-            wheels/*.whl
-            wheels/*.whl.sigstore
+          name: wheels
+          path: wheels/*.whl
+          retention-days: 7
 
       # Cleanup tag and release if the workflow failed or was cancelled
       - name: Cleanup on failure
@@ -133,4 +101,52 @@ jobs:
           # Delete git tag locally and remotely
           git tag -d "$TAG" 2>/dev/null
           git push --delete origin "$TAG" 2>/dev/null
+
+  publish-testpypi:
+    name: Publish to Test PyPI
+    needs: release
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/uvbox
+    permissions:
+      id-token: write
+    steps:
+      - name: Download wheels
+        uses: actions/download-artifact@v4
+        with:
+          name: wheels
+          path: wheels/
+
+      - name: Publish to Test PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          packages-dir: wheels/
+          skip-existing: true
+          attestations: true
+
+  publish-pypi:
+    name: Publish to PyPI
+    needs: publish-testpypi
+    if: github.event.inputs.publish_to_pypi == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/uvbox
+    permissions:
+      id-token: write
+    steps:
+      - name: Download wheels
+        uses: actions/download-artifact@v4
+        with:
+          name: wheels
+          path: wheels/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: wheels/
+          skip-existing: true
+          attestations: true
 

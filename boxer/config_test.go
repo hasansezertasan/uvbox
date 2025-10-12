@@ -21,7 +21,7 @@ func testDirectoryWithFile(t *testing.T, filename string) (string, string) {
 	// Create file
 	filePath := filepath.Join(workingDirectory, filename)
 	if _, err := os.Create(filePath); err != nil {
-		os.RemoveAll(workingDirectory)
+		_ = os.RemoveAll(workingDirectory)
 		t.Fatalf("could not write pyproject.toml file under test temporary directory at: %s", filePath)
 	}
 
@@ -474,7 +474,10 @@ func TestSaveConfigurationToDirectory(t *testing.T) {
 	if err != nil {
 		t.Errorf("could not load test configuration: %s", err)
 	}
-	saveConfigurationToDirectory(configuration, workingDirectory, "copy.toml")
+	err = saveConfigurationToDirectory(configuration, workingDirectory, "copy.toml")
+	if err != nil {
+		t.Errorf("could not save configuration to directory %s: %s", workingDirectory, err)
+	}
 
 	// Load it back
 	Config = filepath.Join(workingDirectory, "copy.toml")
@@ -760,23 +763,8 @@ func assertUvEnvironmentVariableInAutomaticallyFoundConfiguration(t *testing.T, 
 	assertUvEnvironmentVariableInConfiguration(t, configuration, variable)
 }
 
-func assertUvEnvironmentVariableNotInAutomaticallyFoundConfiguration(t *testing.T, workingDirectory, variable string) {
-	configuration, err := loadConfigurationFromEitherCLIArgumentOrDetectedFile(workingDirectory)
-	if err != nil {
-		t.Errorf("could not load test configuration: %s", err)
-	}
-
-	assertUvEnvironmentVariableNotInConfiguration(t, configuration, variable)
-}
-
 func assertUvEnvironmentVariableInConfiguration(t *testing.T, configuration Configuration, variable string) {
 	if !slices.Contains(configuration.Uv.Environment, variable) {
 		t.Errorf("missing '%s' from configuration uv environment variables list '%v'", variable, configuration.Uv.Environment)
-	}
-}
-
-func assertUvEnvironmentVariableNotInConfiguration(t *testing.T, configuration Configuration, variable string) {
-	if slices.Contains(configuration.Uv.Environment, variable) {
-		t.Errorf("unexpected '%s' from configuration uv environment variables list '%v'", variable, configuration.Uv.Environment)
 	}
 }

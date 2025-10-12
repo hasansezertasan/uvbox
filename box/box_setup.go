@@ -276,19 +276,6 @@ func deleteFolderWithLogs(path string) error {
 	return nil
 }
 
-func (b *Box) deleteDedicatedConfigurationFolder() error {
-	configFolder := b.dedicatedConfigurationFolderPath()
-	logger.Trace("Deleting configuration folder", logger.Args("folder", configFolder))
-
-	err := os.RemoveAll(configFolder)
-	if err != nil {
-		return err
-	}
-
-	logger.Trace("Configuration folder deleted", logger.Args("folder", configFolder))
-	return nil
-}
-
 // installDownloadedUv extracts the embedded uv archive to the uv directory
 func (b *Box) installDownloadedUv() error {
 	uvFolder := b.dedicatedUvFolderPath()
@@ -324,7 +311,7 @@ func (b *Box) installEmbeddedCertificatesBundle() error {
 	configFolder := b.dedicatedConfigurationFolderPath()
 	destination := filepath.Join(configFolder, CERTIFICATES_BUNDLE_FILENAME)
 	if err := os.WriteFile(destination, embeddedCertificatesBundle, 0644); err != nil {
-		return fmt.Errorf("Error while writing %s: %w", destination, err)
+		return fmt.Errorf("error while writing %s: %w", destination, err)
 	}
 
 	return nil
