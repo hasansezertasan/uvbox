@@ -222,8 +222,6 @@ def build_single_platform_wheel(
     Raises:
         SystemExit: If the platform is unsupported or binary file is missing
     """
-    print(f"Building wheel for {go_os}/{go_arch}...")
-
     # Find the matching platform configuration
     platform = find_platform_by_go_target(go_os, go_arch)
     if not platform:

@@ -44,8 +44,8 @@ nfpms:
     ids:
       - uvbox
     formats: [apk, archlinux, deb, ipk, rpm]
-    vendor: "Amadeus s.a.s."
-    maintainer: "Jean-Philippe CARLENS <jean-philippe.carlens@amadeus.com>"
+    vendor: "Amadeus"
+    maintainer: "Jean-Philippe CARLENS <jcarlens@pm.me>"
     homepage: "https://github.com/AmadeusITGroup/uvbox"
     description: |
       uvbox generates standalone Python executables that bootstrap an embedded
@@ -60,6 +60,22 @@ release:
   # Use GitHub Releases (default)
   draft: false
   prerelease: auto
+  header: |
+    ## Installation
+
+    **Recommended:** Install uvbox from [PyPI](https://pypi.org/project/uvbox):
+
+    ```bash
+    # With uv
+    uv add --dev uvbox
+
+    # With pip
+    pip install uvbox
+    ```
+
+    Installing from PyPI automatically includes **Go** and **nfpm** as dependencies, so you don't need to install them separately.
+
+    Alternatively, you can download the pre-built binaries below for your platform.
 
 changelog:
   use: github
