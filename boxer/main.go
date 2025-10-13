@@ -17,7 +17,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/fang"
-	"github.com/mholt/archiver"
+	"github.com/mholt/archives"
 	"github.com/pterm/pterm"
 	"github.com/pterm/pterm/putils"
 	"github.com/spf13/cobra"
@@ -71,7 +71,7 @@ func main() {
 		&Config, "config", "c", "", "Configuration file",
 	)
 	pypiCmd.Flags().StringVarP(
-		&Output, "output", "o", "boxes", "Output directory",
+		&Output, "output", "o", "dist", "Output directory",
 	)
 
 	pypiCmd.Flags().BoolVarP(&Darwin, "darwin", "d", false, "Build for darwin")
@@ -97,7 +97,7 @@ func main() {
 		&Config, "config", "c", "", "Configuration file",
 	)
 	wheelCmd.Flags().StringVarP(
-		&Output, "output", "o", "boxes", "Output directory",
+		&Output, "output", "o", "dist", "Output directory",
 	)
 	wheelCmd.Flags().BoolVarP(&Darwin, "darwin", "d", false, "Build for darwin")
 	wheelCmd.Flags().BoolVarP(&Linux, "linux", "l", false, "Build for linux")
@@ -182,7 +182,7 @@ func insertFilesIntoBoxRepository(boxRepository string) error {
 
 	// Create wheels folder
 	wheelsFolderPath := filepath.Join(boxRepository, "wheels")
-	if err := os.Mkdir(wheelsFolderPath, 0755); err != nil {
+	if err := os.MkdirAll(wheelsFolderPath, 0755); err != nil {
 		return fmt.Errorf("failed to create wheels folder inside box repository: %w", err)
 	}
 
@@ -681,9 +681,27 @@ func gzipFile(source, destination string) error {
 		return fmt.Errorf("failed to create directory %s: %w", parentFolder, err)
 	}
 
-	filesToArchive := []string{source}
-	if err := archiver.Archive(filesToArchive, destination); err != nil {
-		return fmt.Errorf("failed to archive files: %w", err)
+	files, err := archives.FilesFromDisk(context.Background(), nil, map[string]string{
+		source: filepath.Base(source),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to prepare file %s for archiving: %w", source, err)
+	}
+
+	out, err := os.Create(destination)
+	if err != nil {
+		return fmt.Errorf("could not touch destination archive %s: %w", destination, err)
+	}
+	defer out.Close()
+
+	format := archives.CompressedArchive{
+		Compression: archives.Gz{},
+		Archival:    archives.Tar{},
+	}
+
+	err = format.Archive(context.Background(), out, files)
+	if err != nil {
+		return fmt.Errorf("failed to archive %s into %s: %w", source, destination, err)
 	}
 
 	return nil

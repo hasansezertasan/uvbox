@@ -6,7 +6,6 @@ toolchain go1.24.6
 
 require (
 	github.com/charmbracelet/fang v0.4.3
-	github.com/mholt/archiver v3.1.1+incompatible
 	github.com/mholt/archives v0.1.4
 	github.com/pterm/pterm v0.12.81
 	github.com/spf13/cobra v1.10.1
@@ -22,7 +21,6 @@ require (
 	github.com/charmbracelet/x/exp/color v0.0.0-20251006100439-2151805163c8 // indirect
 	github.com/charmbracelet/x/term v0.2.1 // indirect
 	github.com/clipperhouse/uax29/v2 v2.2.0 // indirect
-	github.com/frankban/quicktest v1.14.6 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/lucasb-eyer/go-colorful v1.3.0 // indirect
 	github.com/mikelolasagasti/xz v1.0.1 // indirect
@@ -32,11 +30,8 @@ require (
 	github.com/muesli/mango-cobra v1.3.0 // indirect
 	github.com/muesli/mango-pflag v0.2.0 // indirect
 	github.com/muesli/roff v0.1.0 // indirect
-	github.com/nwaples/rardecode v1.1.3 // indirect
-	github.com/pierrec/lz4 v2.6.1+incompatible // indirect
 	github.com/sorairolake/lzip-go v0.3.8 // indirect
 	github.com/spf13/afero v1.15.0 // indirect
-	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
 )
 
 require (
@@ -50,7 +45,6 @@ require (
 	github.com/bodgit/windows v1.0.1 // indirect
 	github.com/containerd/console v1.0.5 // indirect
 	github.com/dsnet/compress v0.0.2-0.20230904184137-39efe44ab707 // indirect
-	github.com/golang/snappy v1.0.0 // indirect
 	github.com/gookit/color v1.6.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
