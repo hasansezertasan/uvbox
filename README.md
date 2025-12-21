@@ -27,9 +27,9 @@
 
 ## What is uvbox?
 
-**uvbox** generates standalone executables that bootstrap an embedded [uv](https://github.com/astral-sh/uv) installation to automatically setup and run your Python application in a fully isolated environment — for any platform, from any platform.
+**`uvbox`** generates standalone executables that bootstrap an embedded [uv](https://github.com/astral-sh/uv) installation to automatically setup and run your Python application in a fully isolated environment — for any platform, from any platform.
 
-**No Python required on the target system.** The binary handles everything: downloads the right Python version, creates a virtual environment, installs dependencies, and runs your app.
+**Python is not required on the target system to run your application.** The binary handles everything: downloads the right Python version, creates a virtual environment, installs dependencies, and runs your application.
 
 <div align="center">
   <img src="./assets/demo.gif" alt="uvbox demo">
@@ -37,13 +37,13 @@
 
 ## Features
 
-- **📦 Package from PyPI or Wheels** — Install your application from package indexes or choose to bundle local wheel files
-- **🚀 True Cross-Compilation** — Build binaries for Linux, macOS, and Windows (AMD64/ARM64) from any platform in seconds
-- **🔄 Auto-Updates** — Built-in version checking and self-update/fallback capabilities for your binaries
-- **🔒 Dependency Freezing** — Use constraints files to ensure reproducible installations
-- **🌍 Enterprise-Friendly** — Support for custom registries, mirrors, and CA certificates
-- **⚡ Fast** — Powered by Go, builds complete in very few seconds
-- **📝 Simple Integration** — Add as a dev dependency to your Python project
+- **Package from PyPI or Wheels** — Install your application from package indexes or choose to bundle local wheel files
+- **True Cross-Compilation** — Build binaries for Linux, macOS, and Windows (AMD64/ARM64) from any platform in seconds
+- **Auto-Updates** — Built-in version checking and self-update/fallback capabilities for your binaries
+- **Dependency Freezing** — Use constraints files to ensure reproducible installations
+- **Enterprise-Friendly** — Support for custom registries, mirrors, and CA certificates
+- **Fast** — Powered by Go, builds complete in very few seconds
+- **Simple Integration** — Add as a dev dependency to your Python project
 
 ## Comparison
 
@@ -54,7 +54,7 @@
 | macOS from Linux/Windows | ✅ Out of the box | ❌ Forbidden by Apple license | ❌ Forbidden by Apple license |
 | Updates | ✅ Built-in | ✅ Built-in | ❌ Manual |
 | Fallbacks | ✅ Version fallback support | ❌ Not supported | ❌ Not supported |
-| Distribution | Downloads at first run | Downloads at first run | Bundles everything (offline-ready) |
+| Distribution | ⚠️ Downloads at first run | ⚠️ Downloads at first run | ✅ Bundles everything (offline-ready) |
 
 **🎯 Choosing the right tool:**
 
@@ -253,10 +253,10 @@ All files are stored in XDG-compliant directories (`$XDG_DATA_HOME/uvbox/` or `~
 
 ### Why Go?
 
-- **⚡ Blazing Fast Compilation** — ~1 second vs ~30 seconds for Rust-based alternatives
-- **🌍 True Cross-Compilation** — Build macOS binaries from Linux/Windows without licenses or complex toolchains
-- **📦 Zero Dependencies** — Just set `GOOS` and `GOARCH` environment variables
-- **🎯 Simple Deployment** — Single static binary, no runtime dependencies
+- **Fast Compilation** — ~1 second vs ~30 seconds for Rust-based alternatives
+- **Cross-compilation out of the box** — Build macOS binaries from Linux/Windows without licenses or complex toolchains
+- **No dependencies** — Just set `GOOS` and `GOARCH` environment variables
+- **Compiles into static binary** — Just a single executable, with no runtime dependencies
 
 ### Runtime Behavior
 
@@ -372,9 +372,10 @@ auto-update = true
 
 See the [`examples/`](./examples) directory for complete working examples:
 
-- [`examples/pypi/simple-app.toml`](./examples/pypi/simple-app.toml) — Minimal PyPI package
-- [`examples/pypi/custom-registry.toml`](./examples/pypi/custom-registry.toml) — Custom registry and mirrors
-- [`examples/pypi/custom-certs.toml`](./examples/pypi/custom-certs.toml) — Corporate CA bundle
+- [`simple-app.toml`](./examples/pypi/simple-app.toml) — Minimal PyPI package
+- [`custom-registry.toml`](./examples/pypi/custom-registry.toml) — Custom registry and mirrors
+- [`custom-certs.toml`](./examples/pypi/custom-certs.toml) — Corporate CA bundle
+- [`optional-dependency.toml`](./examples/pypi/optional-dependency.toml) - Install a package with an optional dependency
 
 ## Requirements
 
