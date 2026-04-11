@@ -85,6 +85,12 @@ pip install uvbox
 
 ### Basic Usage
 
+uvbox supports three source types, each via its own subcommand:
+
+- **`uvbox pypi`** — install the package from a package index (PyPI by default)
+- **`uvbox wheel`** — bundle one or more local wheel files into the binary
+- **`uvbox git`** — fetch the package from a git repository at runtime
+
 Create a simple configuration and build:
 
 ```bash
@@ -118,20 +124,22 @@ uvbox wheel --config uvbox.toml ./my-app.whl
 
 ### Build from a Git Repository
 
-Package an application from a git repository that isn't published to PyPI:
+Package an application from a git repository that isn't published to PyPI.
+The examples below use [`VaasuDevanS/cowsay-python`](https://github.com/VaasuDevanS/cowsay-python)
+so they're copy-paste runnable — pair them with [`examples/git/simple-app.toml`](./examples/git/simple-app.toml):
 
 ```bash
 # Default branch
-uvbox git git+https://github.com/org/repo --config uvbox.toml
+uvbox git git+https://github.com/VaasuDevanS/cowsay-python --config examples/git/simple-app.toml
 
 # Specific tag
-uvbox git git+https://github.com/org/repo@v1.0.0
+uvbox git git+https://github.com/VaasuDevanS/cowsay-python@v6.1
 
 # Specific branch
-uvbox git git+https://github.com/org/repo@main
+uvbox git git+https://github.com/VaasuDevanS/cowsay-python@main
 
 # Specific commit
-uvbox git git+https://github.com/org/repo@abc123
+uvbox git git+https://github.com/VaasuDevanS/cowsay-python@abc123
 
 # SSH (uses your local git credentials)
 uvbox git git+ssh://git@github.com/org/private-repo
@@ -145,12 +153,16 @@ build machine; the end user's local git/ssh setup handles authentication.
 
 **Behavior of `[package.version]` for git builds:**
 - `static` and `dynamic` are ignored for install resolution — the git ref in
-  the spec is the source of truth.
-- `auto-update = true` re-runs `uv tool install --from <spec> --upgrade` on
-  every invocation, giving you the "fresh dependencies every run" behavior
-  equivalent to `pycrucible`'s `delete_after_run = true`.
-- Leave `dynamic` unset when tracking a moving branch; setting it will disable
-  the always-update behavior.
+  the spec is the source of truth. `uvToolInstallGit` never consults them.
+- With `auto-update = true` and no `[package.version]` set, uvbox re-runs
+  `uv tool install --from <spec> --upgrade` on every invocation, giving you
+  the "fresh dependencies every run" behavior equivalent to `pycrucible`'s
+  `delete_after_run = true`. This works because the internal version
+  comparison treats the unset case as always-stale.
+- Setting `static = "x.y.z"` or a `dynamic` URL that resolves to the
+  currently installed version will **disable** the always-update behavior:
+  the version compare matches, and the update path is skipped. Leave both
+  unset when tracking a moving branch.
 
 ## Configuration
 
@@ -236,8 +248,12 @@ environment = [
 #### `[package]`
 Core package configuration.
 
-- **`name`** (required) — Package name to install from PyPI
-- **`script`** (required) — Entry point script to run (from `[project.scripts]` in your package)
+- **`name`** (required) — Distribution name the package registers (what
+  `uv tool list` reports after install). Used for all source types
+  (`pypi`, `wheel`, `git`) — for `git` it must match the name declared in
+  the repo's `pyproject.toml`, not the repo/org slug.
+- **`script`** (required) — Entry point to run. Must match an entry from
+  the package's `[project.scripts]`. Applies to all source types.
 
 #### `[package.version]`
 Version management and updates.
@@ -408,11 +424,11 @@ auto-update = true
 
 See the [`examples/`](./examples) directory for complete working examples:
 
-- [`simple-app.toml`](./examples/git/simple-app.toml) — Minimal Python Package from Git repository
-- [`simple-app.toml`](./examples/pypi/simple-app.toml) — Minimal Python Package from PyPI
-- [`custom-registry.toml`](./examples/pypi/custom-registry.toml) — Custom registry and mirrors
-- [`custom-certs.toml`](./examples/pypi/custom-certs.toml) — Corporate CA bundle
-- [`optional-dependency.toml`](./examples/pypi/optional-dependency.toml) - Install a package with an optional dependency
+- [`git/simple-app.toml`](./examples/git/simple-app.toml) — Minimal Python package from a Git repository
+- [`pypi/simple-app.toml`](./examples/pypi/simple-app.toml) — Minimal Python package from PyPI
+- [`pypi/custom-registry.toml`](./examples/pypi/custom-registry.toml) — Custom registry and mirrors
+- [`pypi/custom-certs.toml`](./examples/pypi/custom-certs.toml) — Corporate CA bundle
+- [`pypi/optional-dependency.toml`](./examples/pypi/optional-dependency.toml) — Install a package with an optional dependency
 
 ## Requirements
 
