@@ -92,7 +92,7 @@ func (b *Box) InstallPackage(packageVersion, packageConstraintsUrl string) error
 	if packageConstraintsUrl != "" {
 		file, err := downloadTemporaryFile(packageConstraintsUrl)
 		if err != nil {
-			logger.Debug("Failed to download constraints file", logger.Args("error", err))
+			return fmt.Errorf("failed to download constraints file from %s: %w", packageConstraintsUrl, err)
 		}
 		constraintsFile = file
 	}
@@ -156,14 +156,47 @@ func (b *Box) InstalledPackagePath() (string, error) {
 	return installedPackage.Path, nil
 }
 
-func (b *Box) uvToolInstall(packageVersion, constraintsFile string) error {
-	if GIT_SOURCE != "" {
-		return b.uvToolInstallGit(constraintsFile)
+// installMethod identifies which install backend uvToolInstall should use.
+type installMethod int
+
+const (
+	installMethodPypi installMethod = iota
+	installMethodWheels
+	installMethodGit
+)
+
+// selectInstallMethod is the pure-function core of the uvToolInstall dispatch.
+// It returns an error when the build-time configuration is inconsistent —
+// specifically when both GIT_SOURCE and INSTALL_WHEELS are set, which would
+// otherwise silently favor one source and discard the other.
+func selectInstallMethod(gitSource, installWheels string) (installMethod, error) {
+	gitSet := gitSource != ""
+	wheelsSet := installWheels == "yes"
+	if gitSet && wheelsSet {
+		return 0, fmt.Errorf("invalid binary: both GIT_SOURCE and INSTALL_WHEELS are set; this indicates a build-time bug, please rebuild")
 	}
-	if INSTALL_WHEELS == "no" {
-		return b.uvToolInstallPypi(packageVersion, constraintsFile)
-	} else {
+	switch {
+	case gitSet:
+		return installMethodGit, nil
+	case wheelsSet:
+		return installMethodWheels, nil
+	default:
+		return installMethodPypi, nil
+	}
+}
+
+func (b *Box) uvToolInstall(packageVersion, constraintsFile string) error {
+	method, err := selectInstallMethod(GIT_SOURCE, INSTALL_WHEELS)
+	if err != nil {
+		return err
+	}
+	switch method {
+	case installMethodGit:
+		return b.uvToolInstallGit(packageVersion, constraintsFile)
+	case installMethodWheels:
 		return b.uvToolInstallWheels(constraintsFile)
+	default:
+		return b.uvToolInstallPypi(packageVersion, constraintsFile)
 	}
 }
 

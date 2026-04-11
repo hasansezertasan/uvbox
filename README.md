@@ -153,16 +153,17 @@ build machine; the end user's local git/ssh setup handles authentication.
 
 **Behavior of `[package.version]` for git builds:**
 - `static` and `dynamic` are ignored for install resolution — the git ref in
-  the spec is the source of truth. `uvToolInstallGit` never consults them.
-- With `auto-update = true` and no `[package.version]` set, uvbox re-runs
-  `uv tool install --from <spec> --upgrade` on every invocation, giving you
-  the "fresh dependencies every run" behavior equivalent to `pycrucible`'s
-  `delete_after_run = true`. This works because the internal version
-  comparison treats the unset case as always-stale.
-- Setting `static = "x.y.z"` or a `dynamic` URL that resolves to the
-  currently installed version will **disable** the always-update behavior:
-  the version compare matches, and the update path is skipped. Leave both
-  unset when tracking a moving branch.
+  the spec is the source of truth. `uvToolInstallGit` logs a warning and
+  drops any supplied version. Leave both unset when tracking a moving branch.
+- With `auto-update = true` and neither `static` nor `dynamic` set, the
+  runtime version check has no target to compare against and falls through
+  to re-running `uv tool install --from <spec> --upgrade` on every
+  invocation, giving you the "fresh dependencies every run" behavior
+  equivalent to `pycrucible`'s `delete_after_run = true`.
+- Setting `static = "x.y.z"` or a `dynamic` URL that happens to resolve to
+  the currently installed version will **disable** the always-update
+  behavior — the outer version compare matches and skips the update path
+  before `uvToolInstallGit` ever runs.
 
 ## Configuration
 

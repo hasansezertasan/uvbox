@@ -21,7 +21,21 @@ func makeTestConfig() Configuration {
 // TestComputeIdentifier_StableForPypi is the regression guard for
 // "additive only, don't affect existing features". The expected value
 // was captured from the pre-git-support version of ComputeIdentifier
-// and must not change when GIT_SOURCE is empty.
+// and must not change when GIT_SOURCE is empty. If this hash changes,
+// existing deployed pypi/wheel binaries will fail to find their
+// installed package on next run — treat any change here as breaking.
+//
+// The hash is SHA1 of:
+//
+//	c.Package.Name + c.Package.Script + c.Package.Version.Static +
+//	  fmt.Sprintf("%t", c.AutoUpdateEnabled())
+//
+// For makeTestConfig() above: "my-package" + "my-script" + "1.0.0" + "true".
+// To regenerate after an intentional breaking change, run:
+//
+//	cfg := makeTestConfig()
+//	GIT_SOURCE = ""
+//	fmt.Println(cfg.ComputeIdentifier())
 func TestComputeIdentifier_StableForPypi(t *testing.T) {
 	// Ensure GIT_SOURCE is empty for this test (it's the default, but be explicit).
 	origGitSource := GIT_SOURCE

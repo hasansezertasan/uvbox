@@ -197,8 +197,13 @@ func validateGitSourceFlag() {
 	if GitSource == "" {
 		return
 	}
+	if len(WheelsToEmbed) > 0 {
+		logger.Fatal("cannot combine a git source with embedded wheels; use either `uvbox git` or `uvbox wheel`, not both")
+	}
 	if err := validateGitSource(GitSource); err != nil {
-		logger.Fatal("invalid git source", logger.Args("error", err))
+		logger.Fatal("invalid git source argument",
+			logger.Args("error", err, "providedValue", GitSource,
+				"hint", "expected form: git+https://host/org/repo[@ref] or git+ssh://git@host/org/repo[@ref]"))
 	}
 }
 
@@ -249,9 +254,7 @@ func insertFilesIntoBoxRepository(boxRepository string) error {
 		}
 	}
 
-	// Write the git source file (always — empty for pypi/wheel builds,
-	// populated for `uvbox git <spec>` builds). See boxer/git.go and
-	// box/box_package_git.go for the embed mechanism.
+	// Always write — see writeGitSourceFile.
 	if err := writeGitSourceFile(boxRepository, GitSource); err != nil {
 		return fmt.Errorf("failed to write git source file: %w", err)
 	}
@@ -376,9 +379,8 @@ func goGenerate(repository, platform, arch string) error {
 func goBuild(repository, buildName, platform, arch string) error {
 	var outbuf, errbuf strings.Builder
 
-	// Compilation flag — see boxer/git.go for the pure helper and its tests.
-	// Git source is NOT injected via ldflags (Go's GOFLAGS parser rejects
-	// `-X main.FOO=bar`); it is embedded via box/git_source.txt instead.
+	// See buildGoBuildLdflags in boxer/git.go for why git source is not
+	// injected via ldflags.
 	ldflags := buildGoBuildLdflags(WheelsToEmbed)
 
 	// Command

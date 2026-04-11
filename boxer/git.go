@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -18,11 +19,11 @@ import (
 //     from the pre-git-support behavior — regression test locks this in).
 //
 // Note on git source: unlike wheels, the git source is NOT injected via
-// ldflags. Go's GOFLAGS parser (strings.Fields) does not support spaces
-// inside flag values, so `-X main.GIT_SOURCE=<spec>` breaks parsing for
-// any ldflag string containing `-X`. Instead, the git source is written
-// to box/git_source.txt and embedded via //go:embed — see
-// writeGitSourceFile below and box/box_package_git.go.
+// ldflags. The Go toolchain splits GOFLAGS on whitespace, so any ldflag
+// string containing `-X main.FOO=bar` is broken across flag boundaries
+// and the toolchain rejects `-X` as an unknown top-level flag. Instead,
+// the git source is written to box/git_source.txt and embedded via
+// //go:embed — see writeGitSourceFile below and box/box_package_git.go.
 func buildGoBuildLdflags(wheelsToEmbed []string) string {
 	ldflags := "-s -w"
 	if len(wheelsToEmbed) > 0 {
@@ -47,10 +48,16 @@ func writeGitSourceFile(boxRepository, gitSource string) error {
 }
 
 // validateGitSource is called from preRun when a GitSource CLI argument
-// was provided. It enforces the only format constraint we validate in
-// uvbox: the spec must begin with "git+". Everything else is delegated
-// to uv, which surfaces malformed specs loudly on first run of the
-// generated binary.
+// was provided. It enforces the uvbox-side format constraints so that
+// obvious typos fail at build time rather than on every end-user machine:
+//
+//   - must begin with "git+"
+//   - the URL after the "git+" prefix must parse
+//   - scheme must be one of http, https, ssh, file
+//   - non-file schemes must have a host
+//
+// Semantic ref resolution (branch, tag, commit existence) is still
+// delegated to uv on first run of the generated binary.
 func validateGitSource(gitSource string) error {
 	if gitSource == "" {
 		return fmt.Errorf("git source must not be empty")
@@ -58,5 +65,37 @@ func validateGitSource(gitSource string) error {
 	if !strings.HasPrefix(gitSource, "git+") {
 		return fmt.Errorf("git source must start with 'git+' (e.g. git+https://github.com/org/repo), got %q", gitSource)
 	}
+
+	raw := strings.TrimPrefix(gitSource, "git+")
+	if raw == "" {
+		return fmt.Errorf("git source is missing a URL after 'git+' prefix, got %q", gitSource)
+	}
+
+	// Strip an optional trailing "@ref" before URL parsing, but only when
+	// the `@` is not part of a userinfo segment like "ssh://git@host/...".
+	// Any `@` appearing after the first `/` of the path component is an
+	// "@ref" suffix; userinfo `@` always precedes the host segment.
+	parseTarget := raw
+	if slash := strings.Index(raw, "/"); slash != -1 {
+		if at := strings.LastIndex(raw, "@"); at > slash {
+			parseTarget = raw[:at]
+		}
+	}
+
+	u, err := url.Parse(parseTarget)
+	if err != nil {
+		return fmt.Errorf("git source %q is not a valid URL: %w", gitSource, err)
+	}
+
+	switch u.Scheme {
+	case "http", "https", "ssh", "file":
+	default:
+		return fmt.Errorf("git source scheme %q is not supported; use http(s), ssh, or file (got %q)", u.Scheme, gitSource)
+	}
+
+	if u.Scheme != "file" && u.Host == "" {
+		return fmt.Errorf("git source %q is missing a host", gitSource)
+	}
+
 	return nil
 }
