@@ -440,6 +440,9 @@ See the [`examples/`](./examples) directory for complete working examples:
 ### Runtime (Generated Binaries)
 
 - **libc** (standard C library, required by Python itself)
+- **git** (only for binaries built with `uvbox git` — `uv` shells out to the
+  system `git` on first run to clone the repository. For `ssh://` specs, the
+  end user's local SSH keys/agent are used for authentication.)
 
 ## License
 
