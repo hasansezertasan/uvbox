@@ -92,7 +92,7 @@ func (b *Box) InstallPackage(packageVersion, packageConstraintsUrl string) error
 	if packageConstraintsUrl != "" {
 		file, err := downloadTemporaryFile(packageConstraintsUrl)
 		if err != nil {
-			return fmt.Errorf("failed to download constraints file from %s: %w", packageConstraintsUrl, err)
+			logger.Debug("Failed to download constraints file", logger.Args("error", err))
 		}
 		constraintsFile = file
 	}
@@ -246,6 +246,7 @@ func (b *Box) uvToolInstallPypi(packageVersion, constraintsFile string) error {
 		"name":            b.PackageName,
 		"version":         packageVersion,
 		"constraintsFile": constraintsFile,
+		"method":          "pypi",
 	}
 	logger.Debug("Installing package", logger.ArgsFromMap(debugArgsMap))
 

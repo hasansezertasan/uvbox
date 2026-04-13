@@ -1,10 +1,8 @@
 package main
 
 import (
-	"bytes"
 	_ "embed"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -78,8 +76,8 @@ func (b *Box) uvToolInstallGit(packageVersion, constraintsFile string) error {
 			logger.Args("ignoredVersion", packageVersion, "gitSource", GIT_SOURCE))
 	}
 
-	logger.Debug("Installing package from git",
-		logger.Args("name", b.PackageName, "source", GIT_SOURCE, "constraintsFile", constraintsFile))
+	logger.Debug("Installing package",
+		logger.Args("name", b.PackageName, "source", GIT_SOURCE, "constraintsFile", constraintsFile, "method", "git"))
 
 	uv, err := b.InstalledUvExecutablePath()
 	if err != nil {
@@ -93,24 +91,18 @@ func (b *Box) uvToolInstallGit(packageVersion, constraintsFile string) error {
 		return fmt.Errorf("could not get uv environment variables: %w", err)
 	}
 
-	// Capture stdout unconditionally into a buffer so that, on failure,
-	// uv's resolver/auth output is included in the returned error rather
-	// than silently discarded. In verbose modes we also stream it to the
-	// user's terminal live.
-	var stdout bytes.Buffer
 	cmd := exec.Command(commandArgs[0], commandArgs[1:]...)
 	cmd.Env = env
 	cmd.Stderr = os.Stderr
+	// Enable Stdout if debug is enabled
 	if debugEnabled() || traceEnabled() {
-		cmd.Stdout = io.MultiWriter(os.Stdout, &stdout)
-	} else {
-		cmd.Stdout = &stdout
+		cmd.Stdout = os.Stdout
 	}
 	logger.Trace("Running", logger.Args("command", commandArgs, "env", env))
 
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("uv failed to install %q from git source %q: %w\nuv output:\n%s",
-			b.PackageName, GIT_SOURCE, err, stdout.String())
+	err = cmd.Run()
+	if err != nil {
+		return fmt.Errorf("failed to run command %v: %w", commandArgs, err)
 	}
 
 	logger.Debug("Installed", logger.Args("package", b.PackageName))
