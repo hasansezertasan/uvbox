@@ -1,13 +1,21 @@
 [tools]
 "github:caarlos0/svu" = "latest"
+"github:CycloneDX/cyclonedx-gomod" = "latest"
 go = "latest"
-python = "3"
+python = "3.14"
 golangci-lint = "latest"
 golangci-lint-langserver = "latest"
 goreleaser = "latest"
 nfpm = "latest"
+"pipx:build" = "latest"
 "pipx:hatchling" = "latest"
-"github:CycloneDX/cyclonedx-gomod" = "latest"
+ruff = "latest"
+typos = "latest"
+hk = { version = "1.43.0", os = ["linux", "macos/arm64", "windows"] }
+pkl = "latest"
+
+[env]
+HK_JOBS = "1"
 
 [tasks.format]
 description = "Format all Go code"
@@ -71,13 +79,30 @@ depends = ["fmt-check:boxer", "lint:boxer", "test:boxer"]
 description = "Run all CI checks for box"
 depends = ["fmt-check:box", "lint:box", "test:box"]
 
+[tasks.lint]
+description = "Run linters with hk"
+run = "hk check --all"
+depends = ["generate:*"]
+
 [tasks.ci]
 description = "Run all CI checks"
-depends = ["ci:boxer", "ci:box"]
+run = [
+  { task = "ci:boxer" },
+  { task = "ci:box" },
+]
+depends = ["generate:*"]
+
+[tasks."e2e:pypi"]
+description = "Run end-to-end tests for the pypi install path (full cross-compile matrix)"
+run = "python scripts/e2e.py pypi"
+
+[tasks."e2e:wheel"]
+description = "Run end-to-end tests for the wheel install path (native target only)"
+run = "python scripts/e2e.py wheel"
 
 [tasks.e2e]
-description = "Run end-to-end tests (build, cross-compile, run)"
-run = "python scripts/e2e.py"
+description = "Run all end-to-end tests (pypi + wheel)"
+run = "python scripts/e2e.py all"
 
 [settings]
 jobs = 1
